@@ -1,41 +1,51 @@
-// pages/Dashboard.jsx
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 
 const Dashboard = () => {
   const [stats, setStats] = useState({});
   const [recentActions, setRecentActions] = useState([]);
-  const token = localStorage.getItem("token"); // get JWT
+  const [loading, setLoading] = useState(true);
+  const token = localStorage.getItem("token");
 
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const res = await axios.get("http://localhost:3000/dashboard/status", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setStats(res.data);
-      } catch (err) {
-        console.error("Error fetching dashboard stats:", err);
-      }
-    };
+    if (!token) return;
 
-    const fetchRecentActions = async () => {
+    const fetchDashboardData = async () => {
       try {
-        const res = await axios.get(
-          "http://localhost:3000/dashboard/recent-actions",
-          {
+        const [statsRes, actionsRes] = await Promise.all([
+          axios.get("http://localhost:3000/dashboard/status", {
             headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-        setRecentActions(res.data);
+          }),
+          axios.get("http://localhost:3000/dashboard/recent-actions", {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
+
+        setStats(statsRes.data);
+        setRecentActions(actionsRes.data);
       } catch (err) {
-        console.error("Error fetching recent actions:", err);
+        console.error("Error fetching dashboard data:", err);
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchStats();
-    fetchRecentActions();
+    fetchDashboardData();
   }, [token]);
+
+  if (!token) {
+    return (
+      <div className="p-6 text-center text-gray-500">
+        Please log in to view the dashboard.
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="p-6 text-center text-gray-500">Loading dashboard...</div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -50,12 +60,13 @@ const Dashboard = () => {
         </div>
         <div className="bg-white rounded-lg shadow p-6">
           <p className="text-sm text-gray-600">Revenue</p>
-          <p className="text-2xl font-bold">${stats.revenue || 0}</p>
+          <p className="text-2xl font-bold">
+            ${Number(stats.revenue || 0).toFixed(2)}
+          </p>{" "}
         </div>
       </div>
 
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold mb-4">Recent Actions</h3>
         <ul className="space-y-2">
           {recentActions.map((action) => (
             <li key={action.id} className="flex justify-between border-b py-2">

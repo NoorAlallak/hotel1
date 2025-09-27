@@ -1,7 +1,7 @@
 // pages/Login.js
 import React, { useState } from "react";
-import { useAuth } from "../context/AuthContext";
-import { useLanguage } from "../context/LanguageContext";
+import { useAuth } from "../Context/AuthContext";
+import { useLanguage } from "../Context/LanguageContext";
 import { Link, useNavigate } from "react-router-dom";
 
 const Login = () => {

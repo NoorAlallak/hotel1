@@ -1,23 +1,25 @@
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useState } from "react";
+import { useAuth } from "../Authentication/useAuth";
 
 function SignUpComponent() {
   const navigate = useNavigate();
   const [error, setError] = useState("");
+  const { signIn } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     const formData = new FormData(e.target);
 
-    const email = formData.get("email").trim();
-    const username = formData.get("username").trim();
+    const email = formData.get("email")?.trim();
+    const username = formData.get("username")?.trim();
     const password = formData.get("password");
     const confirmPassword = formData.get("confirmPassword");
-    const userType = formData.get("userType");
+    const role = formData.get("role") || "viewer";
 
-    if (!email || !username || !password || !confirmPassword || !userType) {
+    if (!email || !username || !password || !confirmPassword || !role) {
       setError("All fields are required");
       return;
     }
@@ -39,18 +41,24 @@ function SignUpComponent() {
     }
 
     try {
-      await axios.post("http://localhost:3000/auth/register", {
+      const response = await axios.post("http://localhost:3000/auth/register", {
         email,
         username,
         password,
-        role: userType,
+        role,
       });
-      console.log("Registration successful");
+
+      console.log("Sign-up successful:", response.data);
+
+      localStorage.setItem("token", response.data.userData.token);
+      localStorage.setItem("user", response.data.userData);
+
+      signIn(response.data.userData, response.data.userData.token);
       navigate("/");
     } catch (err) {
-      console.error("Error during sign up:", err);
+      console.error("Error during sign-up:", err);
       setError(
-        err.response?.data?.message || "Something went wrong. Please try again."
+        err.response?.data?.message || "An error occurred during sign-up"
       );
     }
   };
@@ -62,30 +70,35 @@ function SignUpComponent() {
   return (
     <div className="w-full max-w-sm mx-auto my-20 p-5 border border-gray-300 rounded-lg bg-white shadow-md">
       <h2 className="text-lg font-bold mb-4 text-center">Sign Up</h2>
+
       <form className="flex flex-col" onSubmit={handleSubmit}>
         <input
           type="email"
           placeholder="Email"
           name="email"
           className="border border-gray-300 p-2 mb-4 w-full rounded focus:outline-none focus:ring-2 focus:ring-teal-500"
+          required
         />
         <input
           type="text"
           placeholder="Username"
           name="username"
           className="border border-gray-300 p-2 mb-4 w-full rounded focus:outline-none focus:ring-2 focus:ring-teal-500"
+          required
         />
         <input
           type="password"
           placeholder="Password"
           name="password"
           className="border border-gray-300 p-2 mb-4 w-full rounded focus:outline-none focus:ring-2 focus:ring-teal-500"
+          required
         />
         <input
           type="password"
           placeholder="Confirm Password"
           name="confirmPassword"
           className="border border-gray-300 p-2 mb-4 w-full rounded focus:outline-none focus:ring-2 focus:ring-teal-500"
+          required
         />
 
         <div className="flex flex-col mb-4">
@@ -96,28 +109,29 @@ function SignUpComponent() {
             <label className="flex items-center gap-2">
               <input
                 type="radio"
-                name="userType"
+                name="role"
                 value="viewer"
+                defaultChecked
                 className="cursor-pointer"
-              />{" "}
+              />
               Viewer
             </label>
             <label className="flex items-center gap-2">
               <input
                 type="radio"
-                name="userType"
+                name="role"
                 value="admin"
                 className="cursor-pointer"
-              />{" "}
+              />
               Admin
             </label>
             <label className="flex items-center gap-2">
               <input
                 type="radio"
-                name="userType"
+                name="role"
                 value="manager"
                 className="cursor-pointer"
-              />{" "}
+              />
               Manager
             </label>
           </div>

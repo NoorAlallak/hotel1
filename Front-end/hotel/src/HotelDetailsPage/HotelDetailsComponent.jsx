@@ -42,6 +42,13 @@ export default function HotelDetailsComponent() {
     }
 
     try {
+      console.log("Booking payload:", {
+        roomId,
+        userId: currentUserId,
+        checkInDate: selectedCheckIn,
+        checkOutDate: selectedCheckOut,
+        guestsCount,
+      });
       await axios.post(
         "http://localhost:3000/bookings/",
         {
@@ -51,13 +58,7 @@ export default function HotelDetailsComponent() {
           checkOutDate: selectedCheckOut.toISOString(),
           guestsCount,
         },
-        console.log("Booking payload:", {
-          roomId,
-          userId: currentUserId,
-          checkInDate: selectedCheckIn,
-          checkOutDate: selectedCheckOut,
-          guestsCount,
-        }),
+
         {
           headers: {
             Authorization: `Bearer ${token}`,

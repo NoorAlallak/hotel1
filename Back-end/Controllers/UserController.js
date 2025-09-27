@@ -1,4 +1,4 @@
-const { User } = require("../Models/Associations"); // adjust if your User model path differs
+const { User } = require("../Models/Associations");
 const bcrypt = require("bcrypt");
 const express = require("express");
 const router = express.Router();
@@ -25,7 +25,7 @@ router.post("/", async (req, res) => {
       username,
       email,
       password: hash,
-      role: role.toLowerCase(),
+      role: role && role.trim() ? role.toLowerCase() : "viewer",
     });
     res.status(201).json({
       message: "User created successfully",

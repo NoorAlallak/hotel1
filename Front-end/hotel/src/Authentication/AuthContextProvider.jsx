@@ -22,6 +22,7 @@ export const AuthContextProvider = ({ children }) => {
       user: userData,
     });
   };
+
   const signOut = () => {
     localStorage.removeItem("token");
     setAuthState({
@@ -37,7 +38,6 @@ export const AuthContextProvider = ({ children }) => {
         setAuthState,
         signIn,
         user: authState.user,
-        userId: authState.userId,
         signOut,
       }}
     >

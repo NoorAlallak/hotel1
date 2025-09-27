@@ -19,12 +19,24 @@ router.post("/register", async (req, res) => {
       username,
       email,
       password: hash,
-      role: role?.toLowerCase() || "guest",
+      role: role?.toLowerCase(),
     });
+
+    const token = jwt.sign(
+      { id: newUser.id, role: newUser.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" }
+    );
 
     res.status(201).json({
       message: "User registered successfully",
-      userId: newUser.id,
+      userData: {
+        id: newUser.id,
+        username: newUser.username,
+        email: newUser.email,
+        role: newUser.role,
+        token,
+      },
     });
   } catch (err) {
     console.error(err);
@@ -73,12 +85,12 @@ router.post("/login", async (req, res) => {
 });
 router.post("/register-admin", async (req, res) => {
   try {
-    const { username, email, password, role = "admin" } = req.body;
+    const { username, email, password, role } = req.body;
 
-    if (!username || !email || !password) {
+    if (!username || !email || !password || !role) {
       return res
         .status(400)
-        .json({ message: "Username, email, and password are required." });
+        .json({ message: "Username, email, password, and role are required." });
     }
 
     const hash = await bcrypt.hash(password, 10);

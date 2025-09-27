@@ -31,15 +31,16 @@ app.use("/hotels", HotelsController);
 app.use(
   "/reports",
   authenticate,
-  authorize("admin,manager"),
+  authorize(["admin", "manager"]),
   ReportsController
 );
 app.use(
   "/dashboard",
   authenticate,
-  authorize("admin,manager"),
+  authorize(["admin", "manager"]),
   DashboardController
 );
+
 app.use("/search", SearchController);
 app.use("/rooms", RoomController);
 app.use("/bookings", BookingController);

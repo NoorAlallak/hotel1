@@ -15,30 +15,30 @@ const Bookings = () => {
   // Fetch bookings from API
   const fetchBookings = async () => {
     try {
-      const res = await axios.get("/bookings", {
+      const res = await axios.get("http://localhost:3000/bookings", {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
       if (Array.isArray(res.data)) {
         setBookings(res.data);
       } else {
         console.error("Unexpected response format:", res.data);
-        setBookings([]); // fallback
+        setBookings([]);
       }
     } catch (err) {
       console.error("Error fetching bookings:", err);
-      setBookings([]); // fallback
+      setBookings([]);
     }
   };
 
   // Fetch hotels for filter dropdown
   const fetchHotels = async () => {
     try {
-      const res = await axios.get("/hotels"); // adjust the endpoint
-      if (Array.isArray(res.data)) {
-        setHotels(res.data);
+      const res = await axios.get("http://localhost:3000/hotels");
+      if (Array.isArray(res.data.hotels)) {
+        setHotels(res.data.hotels);
       } else {
         console.error("Unexpected response format for hotels:", res.data);
-        setHotels([]); // fallback
+        setHotels([]);
       }
     } catch (err) {
       console.error("Error fetching hotels:", err);
@@ -53,10 +53,14 @@ const Bookings = () => {
   // Handle status change
   const handleStatusChange = async (bookingId, newStatus) => {
     try {
-      await axios.patch(`/bookings/${bookingId}`, { status: newStatus });
+      await axios.patch(`http://localhost:3000/bookings/${bookingId}`, {
+        status: newStatus.toLowerCase(),
+      });
       setBookings(
         bookings.map((booking) =>
-          booking.id === bookingId ? { ...booking, status: newStatus } : booking
+          booking.id === bookingId
+            ? { ...booking, status: newStatus.toLowerCase() }
+            : booking
         )
       );
     } catch (err) {
@@ -64,12 +68,32 @@ const Bookings = () => {
     }
   };
 
+  // Optional: Delete booking
+  const handleDelete = async (bookingId) => {
+    try {
+      await axios.delete(`http://localhost:3000/bookings/${bookingId}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+      setBookings(bookings.filter((b) => b.id !== bookingId));
+    } catch (err) {
+      console.error("Failed to delete booking:", err);
+    }
+  };
+
   // Filtered bookings
   const filteredBookings = bookings.filter((booking) => {
-    if (filters.status !== "all" && booking.status !== filters.status)
+    if (
+      filters.status !== "all" &&
+      booking.status.toLowerCase() !== filters.status.toLowerCase()
+    ) {
       return false;
-    if (filters.hotel !== "all" && booking.hotel !== filters.hotel)
+    }
+    if (
+      filters.hotel !== "all" &&
+      booking.room?.hotel?.name !== filters.hotel
+    ) {
       return false;
+    }
     if (filters.dateRange) {
       const selectedDate = new Date(filters.dateRange);
       const checkInDate = new Date(booking.checkInDate);
@@ -93,13 +117,13 @@ const Bookings = () => {
     ];
     const csvData = filteredBookings.map((booking) => [
       booking.id,
-      booking.guest,
-      booking.room,
-      booking.hotel,
+      booking.user?.username || "Unknown",
+      booking.room?.type || "-",
+      booking.room?.hotel?.name || "-",
       booking.checkInDate,
       booking.checkOutDate,
-      booking.status,
-      `$${booking.amount}`,
+      booking.status.charAt(0).toUpperCase() + booking.status.slice(1),
+      `$${booking.room?.basePrice || 0}`,
     ]);
 
     const csvContent = [headers, ...csvData]
@@ -216,38 +240,52 @@ const Bookings = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredBookings.map((booking) => (
                 <tr key={booking.id}>
+                  {/* Guest */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">
-                      {booking.guest}
+                      {booking.user?.username || "Unknown"}
                     </div>
                   </td>
+
+                  {/* Room / Hotel */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">
-                      Room {booking.room}
+                      {booking.room?.type || "-"}
                     </div>
-                    <div className="text-sm text-gray-500">{booking.hotel}</div>
+                    <div className="text-sm text-gray-500">
+                      {booking.room?.hotel?.name || "-"}
+                    </div>
                   </td>
+
+                  {/* Dates */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">
                       {booking.checkInDate} to {booking.checkOutDate}
                     </div>
                   </td>
+
+                  {/* Amount */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">
-                      ${booking.amount}
+                      ${booking.room?.basePrice || 0}
                     </div>
                   </td>
+
+                  {/* Status */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <select
-                      value={booking.status}
+                      value={
+                        booking.status.charAt(0).toUpperCase() +
+                        booking.status.slice(1)
+                      }
                       onChange={(e) =>
                         handleStatusChange(booking.id, e.target.value)
                       }
                       className={`text-xs font-semibold rounded-full px-3 py-1 border-0 focus:ring-2 focus:ring-blue-500
                         ${
-                          booking.status === "Confirmed"
+                          booking.status === "confirmed"
                             ? "bg-green-100 text-green-800"
-                            : booking.status === "Pending"
+                            : booking.status === "pending"
                             ? "bg-yellow-100 text-yellow-800"
                             : "bg-red-100 text-red-800"
                         }`}
@@ -257,8 +295,13 @@ const Bookings = () => {
                       <option value="Cancelled">Cancelled</option>
                     </select>
                   </td>
+
+                  {/* Actions */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button className="text-red-600 hover:text-red-900">
+                    <button
+                      className="text-red-600 hover:text-red-900"
+                      onClick={() => handleDelete(booking.id)}
+                    >
                       <i className="fas fa-trash"></i>
                     </button>
                   </td>

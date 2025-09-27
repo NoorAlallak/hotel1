@@ -9,7 +9,7 @@ const SignUp = () => {
     email: "",
     password: "",
     confirmPassword: "",
-    role: "admin",
+    role: "",
   });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -32,7 +32,8 @@ const SignUp = () => {
       !formData.username ||
       !formData.email ||
       !formData.password ||
-      !formData.confirmPassword
+      !formData.confirmPassword ||
+      !formData.role
     ) {
       setError(t("allFieldsRequired"));
       return false;
@@ -68,30 +69,15 @@ const SignUp = () => {
       const response = await axios.post(
         "http://localhost:3000/auth/register-admin",
         {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            username: formData.username,
-            email: formData.email,
-            password: formData.password,
-            role: formData.role,
-          }),
+          username: formData.username,
+          email: formData.email,
+          password: formData.password,
+          role: formData.role,
         }
       );
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setSuccess(true);
-        // Optionally auto-login after successful registration
-        setTimeout(() => {
-          navigate("/login");
-        }, 3000);
-      } else {
-        setError(data.message || t("registrationFailed"));
-      }
+      console.log("Registration response:", response);
+      setSuccess(true);
+      navigate("/dashboard");
     } catch (error) {
       setError(t("networkError"));
       console.error("Registration error:", error);
@@ -203,6 +189,26 @@ const SignUp = () => {
                 value={formData.email}
                 onChange={handleChange}
               />
+            </div>
+            <div>
+              <label
+                htmlFor="role"
+                className="block text-sm font-medium text-gray-700"
+              >
+                {t("role")}
+              </label>
+              <select
+                id="role"
+                name="role"
+                required
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                value={formData.role}
+                onChange={handleChange}
+              >
+                <option value="">{t("Select role")}</option>
+                <option value="admin">{t("Admin")}</option>
+                <option value="manager">{t("Manager")}</option>
+              </select>
             </div>
 
             <div>

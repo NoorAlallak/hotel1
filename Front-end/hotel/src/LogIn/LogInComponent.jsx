@@ -17,7 +17,8 @@ function LogInComponent() {
       });
       console.log("Login successful:", response.data);
       localStorage.setItem("token", response.data.userData.token);
-      signIn(response.data);
+      localStorage.setItem("user", JSON.stringify(response.data.userData));
+      signIn(response.data.userData, response.data.userData.token);
       navigate("/");
     } catch (err) {
       console.error("Error during login:", err);

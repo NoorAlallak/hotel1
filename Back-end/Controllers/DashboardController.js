@@ -7,9 +7,9 @@ const { authenticate, authorize } = require("../Middleware/AuthMiddleware");
 
 // GET /dashboard/status
 router.get(
-  "/dashboard/status",
+  "/status",
   authenticate,
-  authorize("admin", "manager"),
+  authorize(["admin", "manager"]),
   async (req, res) => {
     try {
       const today = new Date();
@@ -24,7 +24,7 @@ router.get(
         },
       });
 
-      // Occupancy
+      // Occupancy rate
       const totalRooms = await Room.count();
       const occupiedRooms = await Booking.count({
         where: {
@@ -37,11 +37,16 @@ router.get(
         ? ((occupiedRooms / totalRooms) * 100).toFixed(0)
         : 0;
 
-      // Revenue (sum of confirmed bookings)
-      const revenueResult = await Booking.sum("totalAmount", {
+      // Revenue using basePrice
+      const bookingsWithRooms = await Booking.findAll({
         where: { status: "confirmed" },
+        include: [{ model: Room, as: "room", attributes: ["basePrice"] }],
       });
-      const revenue = revenueResult || 0;
+
+      const revenue = bookingsWithRooms.reduce(
+        (sum, booking) => sum + Number(booking.room?.basePrice || 0),
+        0
+      );
 
       res.json({ todayBookings, occupancyRate, revenue });
     } catch (err) {
@@ -53,9 +58,9 @@ router.get(
 
 // GET /dashboard/recent-actions
 router.get(
-  "/dashboard/recent-actions",
+  "/recent-actions",
   authenticate,
-  authorize("admin", "manager"),
+  authorize(["admin", "manager"]),
   async (req, res) => {
     try {
       const recentBookings = await Booking.findAll({

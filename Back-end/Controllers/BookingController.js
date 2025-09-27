@@ -69,10 +69,14 @@ router.patch("/:id", async (req, res) => {
 });
 router.get("/", authenticate, async (req, res) => {
   try {
-    const userId = req.user.id;
+    let where = {};
+
+    if (req.user.role === "viewer") {
+      where.userId = req.user.id;
+    }
 
     const bookings = await Booking.findAll({
-      where: { userId },
+      where,
       include: [
         {
           model: Room,
@@ -86,13 +90,18 @@ router.get("/", authenticate, async (req, res) => {
             },
           ],
         },
+        {
+          model: User,
+          as: "user",
+          attributes: ["id", "username", "email"],
+        },
       ],
       order: [["checkInDate", "DESC"]],
     });
 
     res.json(bookings);
   } catch (err) {
-    console.error("Error fetching user bookings:", err);
+    console.error("Error fetching bookings:", err);
     res.status(500).json({ message: "Server error" });
   }
 });

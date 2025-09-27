@@ -9,8 +9,8 @@ User.init(
     email: { type: DataTypes.STRING, allowNull: false, unique: true },
     password: { type: DataTypes.STRING, allowNull: false },
     role: {
-      type: DataTypes.ENUM("admin", "manager", "guest"),
-      defaultValue: "guest",
+      type: DataTypes.ENUM("admin", "manager", "viewer"),
+      defaultValue: "viewer",
     },
     createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
   },
