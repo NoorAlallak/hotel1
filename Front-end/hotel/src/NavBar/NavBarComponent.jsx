@@ -23,15 +23,6 @@ function NavBarComponent() {
         <li className="hover:text-gray-300 text-white transition">
           <a href="/">Home</a>
         </li>
-        <li className="hover:text-gray-300 text-white transition disabled:opacity-50">
-          <a href="#">About</a>
-        </li>
-        <li className="hover:text-gray-300 text-white transition disabled:opacity-50">
-          <a href="#">Services</a>
-        </li>
-        <li className="hover:text-gray-300 text-white transition disabled:opacity-50">
-          <a href="#">Contact</a>
-        </li>
       </ul>
 
       <div className="flex space-x-2 mr-4">

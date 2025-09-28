@@ -11,6 +11,8 @@ export default function BookingPage() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [checkoutData, setCheckoutData] = useState(null);
 
   useEffect(() => {
     if (!user) return;
@@ -81,8 +83,23 @@ export default function BookingPage() {
         }
       );
 
-      alert(`Checkout successful! Total Price: $${res.data.totalPrice}`);
-      setBookings((prev) => prev.filter((b) => b.id !== bookingId));
+      // Store checkout data for celebration
+      setCheckoutData({
+        totalPrice: res.data.totalPrice,
+        originalPrice: res.data.originalPrice,
+        discount: res.data.discount,
+        couponCode: couponCode,
+      });
+
+      // Show celebration
+      setShowCelebration(true);
+
+      // Remove booking from list after a delay
+      setTimeout(() => {
+        setBookings((prev) => prev.filter((b) => b.id !== bookingId));
+        setShowCelebration(false);
+        setCheckoutData(null);
+      }, 10000);
     } catch (err) {
       console.error("Checkout failed:", err.response?.data || err.message);
       alert(
@@ -91,6 +108,11 @@ export default function BookingPage() {
         }`
       );
     }
+  };
+
+  const closeCelebration = () => {
+    setShowCelebration(false);
+    setCheckoutData(null);
   };
 
   if (!user) {
@@ -112,6 +134,147 @@ export default function BookingPage() {
       <h1 className="text-3xl font-bold mb-6 text-center text-gray-800">
         My Bookings
       </h1>
+
+      {/* Celebration Animation */}
+      {showCelebration && (
+        <>
+          {/* Confetti Background */}
+          <div className="fixed inset-0 pointer-events-none z-50">
+            {[...Array(80)].map((_, i) => (
+              <div
+                key={i}
+                className="absolute w-3 h-3 rounded-full animate-bounce"
+                style={{
+                  left: `${Math.random() * 100}%`,
+                  animationDelay: `${Math.random() * 2}s`,
+                  animationDuration: `${1 + Math.random() * 2}s`,
+                  backgroundColor: `hsl(${Math.random() * 360}, 100%, 50%)`,
+                  top: "-10px",
+                  transform: `rotate(${Math.random() * 360}deg)`,
+                }}
+              />
+            ))}
+
+            {/* Floating Celebration Elements */}
+            {["🎉", "✨", "💰", "✅", "🎊", "🏨", "⭐", "💫"].map(
+              (emoji, i) => (
+                <div
+                  key={i}
+                  className="absolute text-3xl animate-bounce pointer-events-none"
+                  style={{
+                    left: `${10 + Math.random() * 80}%`,
+                    animationDelay: `${i * 0.2}s`,
+                    animationDuration: `${2 + Math.random() * 2}s`,
+                  }}
+                >
+                  {emoji}
+                </div>
+              )
+            )}
+          </div>
+
+          {/* Celebration Modal */}
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+            <div
+              className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 text-center shadow-2xl"
+              style={{
+                animation: "scaleIn 0.5s ease-out",
+              }}
+            >
+              {/* Success Icon */}
+              <div className="w-24 h-24 bg-gradient-to-r from-green-400 to-teal-500 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
+                <svg
+                  className="w-12 h-12 text-white"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </div>
+
+              <h2 className="text-3xl font-bold mb-4 text-green-600 animate-bounce">
+                Payment Successful! 🎉
+              </h2>
+
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <p className="text-lg text-gray-700 mb-2">
+                  Your stay is confirmed!
+                </p>
+
+                {checkoutData?.couponCode && (
+                  <div className="mb-3">
+                    <p className="text-sm text-gray-600">
+                      Coupon Applied:{" "}
+                      <span className="font-semibold">
+                        {checkoutData.couponCode}
+                      </span>
+                    </p>
+                    {checkoutData.discount > 0 && (
+                      <p className="text-sm text-green-600 font-semibold">
+                        You saved ${checkoutData.discount}!
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex justify-between items-center border-t pt-3">
+                  <span className="text-gray-600">Total Paid:</span>
+                  <span className="text-2xl font-bold text-teal-600">
+                    ${checkoutData?.totalPrice}
+                  </span>
+                </div>
+
+                {checkoutData?.originalPrice !== checkoutData?.totalPrice && (
+                  <div className="flex justify-between items-center text-sm text-gray-500">
+                    <span>Original price:</span>
+                    <span className="line-through">
+                      ${checkoutData?.originalPrice}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <p className="text-gray-500 mb-6 text-sm">
+                A confirmation email has been sent to your inbox
+              </p>
+
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={closeCelebration}
+                  className="bg-teal-600 text-white px-6 py-3 rounded-lg hover:bg-teal-700 cursor-pointer transition-all duration-200 hover:scale-105 font-semibold"
+                >
+                  Continue Exploring
+                </button>
+                <Link
+                  to="/"
+                  className="bg-gray-200 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-300 cursor-pointer transition-all duration-200 text-center"
+                  onClick={closeCelebration}
+                >
+                  Book Another Stay
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          {/* CSS Animation */}
+          <style jsx>{`
+            @keyframes scaleIn {
+              from {
+                transform: scale(0.7);
+                opacity: 0;
+              }
+              to {
+                transform: scale(1);
+                opacity: 1;
+              }
+            }
+          `}</style>
+        </>
+      )}
 
       {loading ? (
         <p className="text-center text-gray-500">Loading…</p>
@@ -198,9 +361,9 @@ export default function BookingPage() {
                   />
                   <button
                     onClick={() => handleCheckout(b.id, b.couponCode)}
-                    className="bg-teal-600 text-white px-3 py-1 rounded hover:bg-teal-700 text-sm"
+                    className="bg-teal-600 text-white px-3 py-1 rounded hover:bg-teal-700 text-sm cursor-pointer transition-all duration-200 hover:scale-105"
                   >
-                    Checkout
+                    Checkout & Pay
                   </button>
                 </div>
               )}
@@ -210,7 +373,7 @@ export default function BookingPage() {
       )}
 
       {showModal && (
-        <div className="fixed inset-0 bg-opacity-40 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-40">
           <div className="bg-white rounded-lg p-6 w-80 shadow-xl">
             <h2 className="text-lg font-semibold mb-4">Cancel Booking</h2>
             <p className="mb-6">
