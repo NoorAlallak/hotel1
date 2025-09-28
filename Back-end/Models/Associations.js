@@ -4,6 +4,7 @@ const Room = require("./Room");
 const Booking = require("./Booking");
 const User = require("./User");
 const SeasonalPrice = require("./SeasonalPrice");
+const Coupon = require("./Coupon");
 
 Hotel.hasMany(Room, { foreignKey: "hotelId", as: "rooms" });
 Room.belongsTo(Hotel, { foreignKey: "hotelId", as: "hotel" });
@@ -23,4 +24,12 @@ Room.hasMany(SeasonalPrice, {
   as: "seasonalPrices",
 });
 
-module.exports = { sequelize, Hotel, Room, Booking, User, SeasonalPrice };
+module.exports = {
+  sequelize,
+  Hotel,
+  Room,
+  Booking,
+  User,
+  SeasonalPrice,
+  Coupon,
+};

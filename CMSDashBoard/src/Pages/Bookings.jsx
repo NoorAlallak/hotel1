@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useLanguage } from "../Context/LanguageContext";
+import ExportButton from "../Components/ExportButton";
 
 const Bookings = () => {
   const { t } = useLanguage();
@@ -11,37 +12,36 @@ const Bookings = () => {
     dateRange: "",
   });
   const [hotels, setHotels] = useState([]);
+  const token = localStorage.getItem("token");
 
-  // Fetch bookings from API
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "-";
+    const date = new Date(dateStr);
+    return date.toLocaleDateString("en-GB", {
+      year: "numeric",
+      month: "short",
+      day: "2-digit",
+      timeZone: "UTC",
+    });
+  };
+
   const fetchBookings = async () => {
     try {
       const res = await axios.get("http://localhost:3000/bookings", {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        headers: { Authorization: `Bearer ${token}` },
       });
-      if (Array.isArray(res.data)) {
-        setBookings(res.data);
-      } else {
-        console.error("Unexpected response format:", res.data);
-        setBookings([]);
-      }
+      setBookings(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
-      console.error("Error fetching bookings:", err);
-      setBookings([]);
+      console.error(err);
     }
   };
 
-  // Fetch hotels for filter dropdown
   const fetchHotels = async () => {
     try {
       const res = await axios.get("http://localhost:3000/hotels");
-      if (Array.isArray(res.data.hotels)) {
-        setHotels(res.data.hotels);
-      } else {
-        console.error("Unexpected response format for hotels:", res.data);
-        setHotels([]);
-      }
+      setHotels(Array.isArray(res.data.hotels) ? res.data.hotels : []);
     } catch (err) {
-      console.error("Error fetching hotels:", err);
+      console.error(err);
     }
   };
 
@@ -50,125 +50,58 @@ const Bookings = () => {
     fetchHotels();
   }, []);
 
-  // Handle status change
   const handleStatusChange = async (bookingId, newStatus) => {
     try {
       await axios.patch(`http://localhost:3000/bookings/${bookingId}`, {
         status: newStatus.toLowerCase(),
       });
       setBookings(
-        bookings.map((booking) =>
-          booking.id === bookingId
-            ? { ...booking, status: newStatus.toLowerCase() }
-            : booking
+        bookings.map((b) =>
+          b.id === bookingId ? { ...b, status: newStatus.toLowerCase() } : b
         )
       );
     } catch (err) {
-      console.error("Failed to update booking status:", err);
+      console.error(err);
     }
   };
 
-  // Optional: Delete booking
-  const handleDelete = async (bookingId) => {
-    try {
-      await axios.delete(`http://localhost:3000/bookings/${bookingId}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
-      setBookings(bookings.filter((b) => b.id !== bookingId));
-    } catch (err) {
-      console.error("Failed to delete booking:", err);
-    }
-  };
-
-  // Filtered bookings
   const filteredBookings = bookings.filter((booking) => {
     if (
       filters.status !== "all" &&
       booking.status.toLowerCase() !== filters.status.toLowerCase()
-    ) {
+    )
       return false;
-    }
-    if (
-      filters.hotel !== "all" &&
-      booking.room?.hotel?.name !== filters.hotel
-    ) {
+    if (filters.hotel !== "all" && booking.room?.hotel?.name !== filters.hotel)
       return false;
-    }
     if (filters.dateRange) {
-      const selectedDate = new Date(filters.dateRange);
       const checkInDate = new Date(booking.checkInDate);
       const checkOutDate = new Date(booking.checkOutDate);
+      const selectedDate = new Date(filters.dateRange);
       if (selectedDate < checkInDate || selectedDate > checkOutDate)
         return false;
     }
     return true;
   });
 
-  const exportToCSV = () => {
-    const headers = [
-      "ID",
-      "Guest",
-      "Room",
-      "Hotel",
-      "Check-In",
-      "Check-Out",
-      "Status",
-      "Amount",
-    ];
-    const csvData = filteredBookings.map((booking) => [
-      booking.id,
-      booking.user?.username || "Unknown",
-      booking.room?.type || "-",
-      booking.room?.hotel?.name || "-",
-      booking.checkInDate,
-      booking.checkOutDate,
-      booking.status.charAt(0).toUpperCase() + booking.status.slice(1),
-      `$${booking.room?.basePrice || 0}`,
-    ]);
-
-    const csvContent = [headers, ...csvData]
-      .map((row) => row.join(","))
-      .join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "bookings.csv";
-    a.click();
-  };
-
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-800">{t("bookings")}</h2>
-        <div className="flex space-x-2">
-          <button
-            onClick={exportToCSV}
-            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md flex items-center"
-          >
-            <i className="fas fa-file-export mr-2"></i>
-            Export CSV
-          </button>
-          <button className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md flex items-center">
-            <i className="fas fa-plus mr-2"></i>
-            New Booking
-          </button>
-        </div>
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold">{t("Bookings")}</h2>
+
+        <ExportButton data={filteredBookings} filename="bookings.csv" />
       </div>
 
       {/* Filters */}
       <div className="bg-white p-4 rounded-lg shadow">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Status
-            </label>
+            <label>Status</label>
             <select
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
               value={filters.status}
               onChange={(e) =>
                 setFilters({ ...filters, status: e.target.value })
               }
+              className="border p-2 w-full"
             >
               <option value="all">All Statuses</option>
               <option value="Confirmed">Confirmed</option>
@@ -177,15 +110,13 @@ const Bookings = () => {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Hotel
-            </label>
+            <label>Hotel</label>
             <select
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
               value={filters.hotel}
               onChange={(e) =>
                 setFilters({ ...filters, hotel: e.target.value })
               }
+              className="border p-2 w-full"
             >
               <option value="all">All Hotels</option>
               {hotels.map((hotel) => (
@@ -196,16 +127,14 @@ const Bookings = () => {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Date
-            </label>
+            <label>Date</label>
             <input
               type="date"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
               value={filters.dateRange}
               onChange={(e) =>
                 setFilters({ ...filters, dateRange: e.target.value })
               }
+              className="border p-2 w-full"
             />
           </div>
         </div>
@@ -217,62 +146,31 @@ const Bookings = () => {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Guest
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Room/Hotel
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Dates
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Amount
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
+                <th className="px-6 py-3">Guest</th>
+                <th className="px-6 py-3">Room/Hotel</th>
+                <th className="px-6 py-3">Dates</th>
+                <th className="px-6 py-3">Amount</th>
+                <th className="px-6 py-3">Status</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredBookings.map((booking) => (
                 <tr key={booking.id}>
-                  {/* Guest */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
-                      {booking.user?.username || "Unknown"}
-                    </div>
+                  <td className="px-6 py-4">
+                    {booking.user?.username || "Unknown"}
                   </td>
-
-                  {/* Room / Hotel */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
-                      {booking.room?.type || "-"}
-                    </div>
-                    <div className="text-sm text-gray-500">
+                  <td className="px-6 py-4">
+                    <div>{booking.room?.type || "-"}</div>
+                    <div className="text-gray-500">
                       {booking.room?.hotel?.name || "-"}
                     </div>
                   </td>
-
-                  {/* Dates */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      {booking.checkInDate} to {booking.checkOutDate}
-                    </div>
+                  <td className="px-6 py-4">
+                    {formatDate(booking.checkInDate)} to{" "}
+                    {formatDate(booking.checkOutDate)}
                   </td>
-
-                  {/* Amount */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
-                      ${booking.room?.basePrice || 0}
-                    </div>
-                  </td>
-
-                  {/* Status */}
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-6 py-4">${booking.room?.basePrice || 0}</td>
+                  <td className="px-6 py-4">
                     <select
                       value={
                         booking.status.charAt(0).toUpperCase() +
@@ -281,29 +179,12 @@ const Bookings = () => {
                       onChange={(e) =>
                         handleStatusChange(booking.id, e.target.value)
                       }
-                      className={`text-xs font-semibold rounded-full px-3 py-1 border-0 focus:ring-2 focus:ring-blue-500
-                        ${
-                          booking.status === "confirmed"
-                            ? "bg-green-100 text-green-800"
-                            : booking.status === "pending"
-                            ? "bg-yellow-100 text-yellow-800"
-                            : "bg-red-100 text-red-800"
-                        }`}
+                      className="text-xs px-2 py-1 rounded"
                     >
                       <option value="Confirmed">Confirmed</option>
                       <option value="Pending">Pending</option>
                       <option value="Cancelled">Cancelled</option>
                     </select>
-                  </td>
-
-                  {/* Actions */}
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button
-                      className="text-red-600 hover:text-red-900"
-                      onClick={() => handleDelete(booking.id)}
-                    >
-                      <i className="fas fa-trash"></i>
-                    </button>
                   </td>
                 </tr>
               ))}

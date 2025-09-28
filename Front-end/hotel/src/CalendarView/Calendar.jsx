@@ -11,7 +11,6 @@ import {
   isSameDay,
   isAfter,
   isBefore,
-  parseISO,
 } from "date-fns";
 import axios from "axios";
 
@@ -22,7 +21,13 @@ export default function Calendar({ roomId, onDatesChange }) {
   const [showCalendar, setShowCalendar] = useState(false);
   const [activeInput, setActiveInput] = useState("checkin");
   const [bookedDates, setBookedDates] = useState([]);
-  const today = new Date(); // ✅ used to disable past dates
+  const today = new Date();
+
+  // Parse DATE string as UTC to avoid timezone shift
+  const parseDateUTC = (dateStr) => {
+    const [year, month, day] = dateStr.split("-").map(Number);
+    return new Date(Date.UTC(year, month - 1, day));
+  };
 
   // Fetch booked dates from API
   useEffect(() => {
@@ -32,8 +37,8 @@ export default function Calendar({ roomId, onDatesChange }) {
           `http://localhost:3000/bookings/calendar-events?room_id=${roomId}`
         );
         const formattedDates = res.data.map((event) => ({
-          start: parseISO(event.start),
-          end: parseISO(event.end),
+          start: parseDateUTC(event.start),
+          end: parseDateUTC(event.end),
         }));
         setBookedDates(formattedDates);
       } catch (err) {
@@ -43,6 +48,7 @@ export default function Calendar({ roomId, onDatesChange }) {
     if (roomId) fetchBookedDates();
   }, [roomId]);
 
+  // Check if a date is booked
   const isDateBooked = (date) =>
     bookedDates.some(
       (b) =>
@@ -50,6 +56,29 @@ export default function Calendar({ roomId, onDatesChange }) {
         isSameDay(date, b.start) ||
         isSameDay(date, b.end)
     );
+
+  const handleDateClick = (date) => {
+    if (activeInput === "checkin") {
+      setCheckIn(date);
+      setCheckOut(null);
+      setActiveInput("checkout");
+    } else {
+      if (!checkIn || date <= checkIn) {
+        setCheckIn(date);
+        setCheckOut(null);
+        setActiveInput("checkout");
+      } else {
+        setCheckOut(date);
+        setShowCalendar(false);
+        onDatesChange(checkIn, date);
+      }
+    }
+  };
+
+  const handleInputClick = (inputType) => {
+    setActiveInput(inputType);
+    setShowCalendar(true);
+  };
 
   const renderCalendar = () => {
     const monthStart = startOfMonth(currentMonth);
@@ -65,7 +94,7 @@ export default function Calendar({ roomId, onDatesChange }) {
       for (let i = 0; i < 7; i++) {
         const date = day;
         const isDisabled =
-          !isSameMonth(date, monthStart) || isBefore(date, today); // ✅ disable past dates
+          !isSameMonth(date, monthStart) || isBefore(date, today);
         const isBooked = isDateBooked(date);
         const isSelected =
           (checkIn && isSameDay(date, checkIn)) ||
@@ -90,45 +119,26 @@ export default function Calendar({ roomId, onDatesChange }) {
 
         days.push(
           <div
-            key={date.toString()}
+            key={date.toISOString()}
             className={dayClass}
             onClick={() => !isDisabled && !isBooked && handleDateClick(date)}
           >
             {format(date, "d")}
           </div>
         );
+
         day = addDays(day, 1);
       }
+
       rows.push(
-        <div key={day.toString()} className="grid grid-cols-7 gap-1">
+        <div key={day.toISOString()} className="grid grid-cols-7 gap-1">
           {days}
         </div>
       );
       days = [];
     }
+
     return rows;
-  };
-
-  const handleDateClick = (date) => {
-    if (activeInput === "checkin") {
-      setCheckIn(date);
-      setActiveInput("checkout");
-    } else {
-      if (date > checkIn) {
-        setCheckOut(date);
-        setShowCalendar(false);
-        onDatesChange(checkIn, date); // ✅ send dates up to parent
-      } else {
-        setCheckIn(date);
-        setCheckOut(null);
-        setActiveInput("checkout");
-      }
-    }
-  };
-
-  const handleInputClick = (inputType) => {
-    setActiveInput(inputType);
-    setShowCalendar(true);
   };
 
   return (

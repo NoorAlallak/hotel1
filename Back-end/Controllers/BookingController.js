@@ -122,8 +122,8 @@ router.get("/calendar-events", async (req, res) => {
     const events = bookings.map((b) => ({
       id: b.id,
       title: `Room ${b.room.type} Booking #${b.id}`,
-      start: b.checkInDate,
-      end: b.checkOutDate,
+      start: b.getDataValue("checkInDate"),
+      end: b.getDataValue("checkOutDate"),
       status: b.status,
     }));
 

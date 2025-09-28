@@ -1,5 +1,6 @@
 // context/LanguageContext.js
 import React, { createContext, useContext, useState } from "react";
+import SeasonalPrices from "../Pages/SeasonalPrices";
 
 const LanguageContext = createContext();
 
@@ -44,6 +45,7 @@ export const LanguageProvider = ({ children }) => {
       search: "Search",
       filter: "Filter",
       export: "Export",
+      seasonalPrices: "Seasonal Prices",
       // Add more translations as needed
     },
     ar: {
@@ -68,7 +70,7 @@ export const LanguageProvider = ({ children }) => {
       search: "بحث",
       filter: "تصفية",
       export: "تصدير",
-      // Add more translations as needed
+      seasonalPrices: "أسعار موسمية",
     },
   };
 

@@ -12,6 +12,11 @@ const Sidebar = ({ activePage, setActivePage }) => {
     { id: "hotels", icon: "fas fa-hotel", label: t("hotels") },
     { id: "rooms", icon: "fas fa-bed", label: t("rooms") },
     { id: "bookings", icon: "fas fa-calendar-check", label: t("bookings") },
+    {
+      id: "seasonal-prices",
+      icon: "fas fa-calendar-alt",
+      label: t("seasonalPrices"),
+    },
     { id: "coupons", icon: "fas fa-tag", label: t("coupons") },
     { id: "media", icon: "fas fa-images", label: t("media") },
   ];

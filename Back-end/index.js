@@ -5,8 +5,10 @@ const User = require("./Models/User");
 const Room = require("./Models/Room");
 const Booking = require("./Models/Booking");
 const SeasonalPrice = require("./Models/SeasonalPrice");
+const Coupon = require("./Models/Coupon");
 const path = require("path");
 const app = express();
+
 const cores = require("cors");
 app.use(
   cores({
@@ -24,6 +26,8 @@ const ReportsController = require("./Controllers/ReportsController");
 const SearchController = require("./Controllers/SearchController");
 const { authenticate, authorize } = require("./Middleware/AuthMiddleware");
 const UserController = require("./Controllers/UserController");
+const CouponController = require("./Controllers/CouponsController");
+const CheckOutController = require("./Controllers/CheckOutController");
 app.use(express.json());
 app.use("/users", authenticate, authorize("admin"), UserController);
 app.use("/auth", AuthController);
@@ -40,7 +44,7 @@ app.use(
   authorize(["admin", "manager"]),
   DashboardController
 );
-
+app.use("/checkout", authenticate, CheckOutController);
 app.use("/search", SearchController);
 app.use("/rooms", RoomController);
 app.use("/bookings", BookingController);
@@ -52,6 +56,7 @@ app.use(
 app.get("/admin", authenticate, authorize("admin"), (req, res) => {
   res.json({ message: `Welcome, Admin! ${req.user.id}` });
 });
+app.use("/coupons", require("./Controllers/CouponsController"));
 
 (async () => {
   try {

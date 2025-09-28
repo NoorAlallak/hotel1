@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from "react";
-import RoomApi from "../Apis/RoomApi"; // your API functions
+import RoomApi from "../Apis/RoomApi";
 import axios from "axios";
+import ExportButton from "../Components/ExportButton";
 
-export default function Rooms() {
+export default function Rooms({ setActivePage, setSelectedRoomId }) {
   const [rooms, setRooms] = useState([]);
-  const [hotels, setHotels] = useState([]);
+  const [, setHotels] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingRoom, setEditingRoom] = useState(null);
   const [showSeasonalPriceModal, setShowSeasonalPriceModal] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState(null);
 
-  // Form state
   const [formData, setFormData] = useState({
     hotelId: "",
     type: "",
@@ -118,26 +118,7 @@ export default function Rooms() {
     }
   };
 
-  const handleImageUpload = (e) => {
-    const files = Array.from(e.target.files);
-    setFormData((prev) => ({ ...prev, images: [...prev.images, ...files] }));
-  };
-
-  const removeImage = async (index, imageUrl) => {
-    if (editingRoom && typeof imageUrl === "string") {
-      try {
-        await RoomApi.deleteImage(editingRoom.id, imageUrl);
-      } catch (err) {
-        alert("Error deleting image: " + err.message);
-        return;
-      }
-    }
-    setFormData((prev) => ({
-      ...prev,
-      images: prev.images.filter((_, i) => i !== index),
-    }));
-  };
-
+  // Add seasonal price
   const handleAddSeasonalPrice = async (e) => {
     e.preventDefault();
     try {
@@ -153,6 +134,7 @@ export default function Rooms() {
     }
   };
 
+  // Delete seasonal price
   const handleDeleteSeasonalPrice = async (id) => {
     try {
       setLoading(true);
@@ -165,17 +147,31 @@ export default function Rooms() {
     }
   };
 
+  const exportData = () => {
+    return rooms.map((room) => ({
+      ID: room.id,
+      Hotel: room.hotel?.name,
+      Type: room.type,
+      Capacity: room.capacity,
+      BasePrice: room.basePrice,
+      Description: room.description,
+    }));
+  };
+
   return (
     <div className="space-y-6 p-4">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Rooms</h2>
-        <button
-          onClick={() => setShowModal(true)}
-          disabled={loading}
-          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md disabled:opacity-50"
-        >
-          Add Room
-        </button>
+        <div className="space-x-2 flex items-center ">
+          <ExportButton data={exportData()} filename="rooms" />
+          <button
+            onClick={() => setShowModal(true)}
+            disabled={loading}
+            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md disabled:opacity-50"
+          >
+            Add Room
+          </button>
+        </div>
       </div>
 
       {loading && <div>Loading...</div>}
@@ -218,8 +214,8 @@ export default function Rooms() {
                   </button>
                   <button
                     onClick={() => {
-                      setSelectedRoom(room);
-                      setShowSeasonalPriceModal(true);
+                      setSelectedRoomId(room.id);
+                      setActivePage("seasonal-prices");
                     }}
                     className="text-green-600 hover:text-green-900"
                   >
@@ -241,147 +237,21 @@ export default function Rooms() {
       {/* Add/Edit Room Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
-            <h3 className="text-lg font-semibold mb-4">
-              {editingRoom ? "Edit Room" : "Add Room"}
-            </h3>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium">Hotel</label>
-                  <select
-                    required
-                    value={formData.hotelId}
-                    onChange={(e) =>
-                      setFormData({ ...formData, hotelId: e.target.value })
-                    }
-                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                  >
-                    <option value="">Select Hotel</option>
-                    {hotels.map((hotel) => (
-                      <option key={hotel.id} value={hotel.id}>
-                        {hotel.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium">Type</label>
-                  <select
-                    value={formData.type}
-                    onChange={(e) =>
-                      setFormData({ ...formData, type: e.target.value })
-                    }
-                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                  >
-                    <option value=""></option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium">Capacity</label>
-                  <input
-                    type="number"
-                    min="1"
-                    required
-                    value={formData.capacity}
-                    onChange={(e) =>
-                      setFormData({ ...formData, capacity: e.target.value })
-                    }
-                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium">
-                    Base Price
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    required
-                    value={formData.basePrice}
-                    onChange={(e) =>
-                      setFormData({ ...formData, basePrice: e.target.value })
-                    }
-                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium">Description</label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
-                  rows="3"
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium">Images</label>
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="mt-1 block w-full"
-                />
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {formData.images.map((image, i) => (
-                    <div key={i} className="relative">
-                      {image instanceof File ? (
-                        <img
-                          src={URL.createObjectURL(image)}
-                          alt="Preview"
-                          className="w-20 h-20 object-cover rounded"
-                        />
-                      ) : (
-                        <img
-                          src={`http://localhost:3000${image}`}
-                          alt="Room"
-                          className="w-20 h-20 object-cover rounded"
-                        />
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => removeImage(i, image)}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-                >
-                  {editingRoom ? "Update Room" : "Add Room"}
-                </button>
-              </div>
-            </form>
-          </div>
+          {/* Modal content */}
         </div>
       )}
 
       {/* Seasonal Price Modal */}
       {showSeasonalPriceModal && selectedRoom && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
+          <div className="bg-white rounded-lg max-w-md w-full p-6 overflow-y-auto max-h-[80vh]">
             <h3 className="text-lg font-semibold mb-4">
-              Seasonal Prices for {selectedRoom.hotel?.name}
+              Seasonal Prices for {selectedRoom.type} -{" "}
+              {selectedRoom.hotel?.name}
             </h3>
-            <form onSubmit={handleAddSeasonalPrice} className="space-y-4">
+
+            {/* Add New Seasonal Price Form */}
+            <form onSubmit={handleAddSeasonalPrice} className="space-y-4 mb-4">
               <div>
                 <label className="block text-sm font-medium">Season Name</label>
                 <input
@@ -435,7 +305,7 @@ export default function Rooms() {
                 <label className="block text-sm font-medium">Price</label>
                 <input
                   type="number"
-                  step="0.01"
+                  step="1"
                   min="0"
                   required
                   value={seasonalPriceData.price}
@@ -448,45 +318,7 @@ export default function Rooms() {
                   className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
                 />
               </div>
-
-              {selectedRoom.seasonalPrices?.length > 0 && (
-                <div>
-                  <h4 className="font-semibold mt-2 mb-1">
-                    Existing Seasonal Prices
-                  </h4>
-                  <ul className="space-y-1">
-                    {selectedRoom.seasonalPrices.map((price) => (
-                      <li
-                        key={price.id}
-                        className="flex justify-between bg-gray-50 p-2 rounded"
-                      >
-                        <div>
-                          {price.name} (
-                          {new Date(price.startDate).toLocaleDateString()} -{" "}
-                          {new Date(price.endDate).toLocaleDateString()}) - $
-                          {price.price}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteSeasonalPrice(price.id)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          Delete
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowSeasonalPriceModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md"
-                >
-                  Cancel
-                </button>
+              <div className="flex justify-end space-x-3 pt-2">
                 <button
                   type="submit"
                   className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600"
@@ -495,6 +327,45 @@ export default function Rooms() {
                 </button>
               </div>
             </form>
+
+            {/* Existing Seasonal Prices */}
+            {selectedRoom.seasonalPrices?.length > 0 && (
+              <div>
+                <h4 className="font-semibold mb-2">Existing Seasonal Prices</h4>
+                <ul className="divide-y divide-gray-200">
+                  {selectedRoom.seasonalPrices.map((price) => (
+                    <li
+                      key={price.id}
+                      className="flex justify-between items-center p-2 bg-gray-50 rounded mb-1"
+                    >
+                      <div>
+                        {price.name} (
+                        {new Date(price.startDate).toLocaleDateString()} -{" "}
+                        {new Date(price.endDate).toLocaleDateString()}) - $
+                        {price.price}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteSeasonalPrice(price.id)}
+                        className="text-red-600 hover:text-red-900"
+                      >
+                        Delete
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <div className="flex justify-end mt-4">
+              <button
+                type="button"
+                onClick={() => setShowSeasonalPriceModal(false)}
+                className="px-4 py-2 border border-gray-300 rounded-md"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

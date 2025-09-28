@@ -1,4 +1,3 @@
-// controllers/dashboardController.js
 const express = require("express");
 const router = express.Router();
 const { Booking, Room, User } = require("../Models/Associations");
@@ -24,7 +23,6 @@ router.get(
         },
       });
 
-      // Occupancy rate
       const totalRooms = await Room.count();
       const occupiedRooms = await Booking.count({
         where: {
@@ -37,7 +35,6 @@ router.get(
         ? ((occupiedRooms / totalRooms) * 100).toFixed(0)
         : 0;
 
-      // Revenue using basePrice
       const bookingsWithRooms = await Booking.findAll({
         where: { status: "confirmed" },
         include: [{ model: Room, as: "room", attributes: ["basePrice"] }],

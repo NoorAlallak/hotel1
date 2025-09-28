@@ -1,8 +1,7 @@
-// App.js
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "./context/AuthContext";
-import { LanguageProvider } from "./context/LanguageContext";
+import { AuthProvider } from "./Context/AuthContext";
+import { LanguageProvider } from "./Context/LanguageContext";
 import Login from "./Pages/Login";
 import SignUp from "./Pages/SignUp";
 import DashboardLayout from "./components/DashboardLayout";

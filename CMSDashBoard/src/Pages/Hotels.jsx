@@ -125,7 +125,6 @@ const Hotels = () => {
     }
   };
 
-  // Prepare data for export
   const exportData = hotels.map((hotel) => ({
     ID: hotel.id,
     Name: hotel.name,

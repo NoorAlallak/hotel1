@@ -9,7 +9,6 @@ export default function BookingPage() {
 
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
-
   const [showModal, setShowModal] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
 
@@ -66,6 +65,31 @@ export default function BookingPage() {
     } finally {
       setShowModal(false);
       setSelectedBooking(null);
+    }
+  };
+
+  const handleCheckout = async (bookingId, couponCode) => {
+    try {
+      const res = await axios.post(
+        `http://localhost:3000/checkout/${bookingId}`,
+        { couponCode },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      alert(`Checkout successful! Total Price: $${res.data.totalPrice}`);
+      setBookings((prev) => prev.filter((b) => b.id !== bookingId));
+    } catch (err) {
+      console.error("Checkout failed:", err.response?.data || err.message);
+      alert(
+        `Checkout failed: ${
+          err.response?.data?.message || "Please try again later"
+        }`
+      );
     }
   };
 
@@ -154,13 +178,39 @@ export default function BookingPage() {
                   View Hotel
                 </Link>
               </div>
+
+              {b.status === "confirmed" && (
+                <div className="mt-2 flex flex-col gap-2">
+                  <input
+                    type="text"
+                    placeholder="Enter coupon code (optional)"
+                    value={b.couponCode || ""}
+                    onChange={(e) =>
+                      setBookings((prev) =>
+                        prev.map((bk) =>
+                          bk.id === b.id
+                            ? { ...bk, couponCode: e.target.value }
+                            : bk
+                        )
+                      )
+                    }
+                    className="border border-gray-300 px-2 py-1 rounded text-sm"
+                  />
+                  <button
+                    onClick={() => handleCheckout(b.id, b.couponCode)}
+                    className="bg-teal-600 text-white px-3 py-1 rounded hover:bg-teal-700 text-sm"
+                  >
+                    Checkout
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>
       )}
 
       {showModal && (
-        <div className="fixed inset-0  bg-opacity-40 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-80 shadow-xl">
             <h2 className="text-lg font-semibold mb-4">Cancel Booking</h2>
             <p className="mb-6">
