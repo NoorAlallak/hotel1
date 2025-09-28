@@ -6,8 +6,10 @@ const Room = require("./Models/Room");
 const Booking = require("./Models/Booking");
 const SeasonalPrice = require("./Models/SeasonalPrice");
 const Coupon = require("./Models/Coupon");
+const Media = require("./Models/Media");
 const path = require("path");
 const app = express();
+app.use("/uploads", express.static("uploads"));
 
 const cores = require("cors");
 app.use(
@@ -24,10 +26,12 @@ const RoomController = require("./Controllers/RoomController");
 const BookingController = require("./Controllers/BookingController");
 const ReportsController = require("./Controllers/ReportsController");
 const SearchController = require("./Controllers/SearchController");
-const { authenticate, authorize } = require("./Middleware/AuthMiddleware");
 const UserController = require("./Controllers/UserController");
 const CouponController = require("./Controllers/CouponsController");
 const CheckOutController = require("./Controllers/CheckOutController");
+const MediaController = require("./Controllers/MediaController");
+const { authenticate, authorize } = require("./Middleware/AuthMiddleware");
+
 app.use(express.json());
 app.use("/users", authenticate, authorize("admin"), UserController);
 app.use("/auth", AuthController);
@@ -44,6 +48,7 @@ app.use(
   authorize(["admin", "manager"]),
   DashboardController
 );
+app.use("/media", authenticate, MediaController);
 app.use("/checkout", authenticate, CheckOutController);
 app.use("/search", SearchController);
 app.use("/rooms", RoomController);

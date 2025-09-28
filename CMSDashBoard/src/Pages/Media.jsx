@@ -1,39 +1,28 @@
-// pages/Media.js
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 import { useLanguage } from "../Context/LanguageContext";
 
 const Media = () => {
   const { t } = useLanguage();
-  const [media, setMedia] = useState([
-    {
-      id: 1,
-      name: "hotel-exterior.jpg",
-      type: "image",
-      size: "2.4 MB",
-      uploaded: "2024-01-10",
-      url: "https://via.placeholder.com/300x200",
-    },
-    {
-      id: 2,
-      name: "room-deluxe.png",
-      type: "image",
-      size: "1.8 MB",
-      uploaded: "2024-01-12",
-      url: "https://via.placeholder.com/300x200",
-    },
-    {
-      id: 3,
-      name: "lobby-panorama.jpg",
-      type: "image",
-      size: "3.2 MB",
-      uploaded: "2024-01-15",
-      url: "https://via.placeholder.com/300x200",
-    },
-  ]);
-
+  const [media, setMedia] = useState([]);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
+  const token = localStorage.getItem("token");
+
+  useEffect(() => {
+    const fetchMedia = async () => {
+      try {
+        const res = await axios.get("http://localhost:3000/media", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setMedia(res.data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchMedia();
+  }, []);
 
   const handleFileSelect = (e) => {
     setSelectedFiles(Array.from(e.target.files));
@@ -43,57 +32,60 @@ const Media = () => {
     if (selectedFiles.length === 0) return;
 
     setIsUploading(true);
-    setUploadProgress(0);
+    const formData = new FormData();
+    selectedFiles.forEach((file) => formData.append("files[]", file));
 
-    // Simulate upload progress
-    const interval = setInterval(() => {
-      setUploadProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setIsUploading(false);
-
-          // Add uploaded files to media library
-          const newMedia = selectedFiles.map((file, index) => ({
-            id: media.length + index + 1,
-            name: file.name,
-            type: file.type.startsWith("image/") ? "image" : "file",
-            size: `${(file.size / 1024 / 1024).toFixed(1)} MB`,
-            uploaded: new Date().toISOString().split("T")[0],
-            url: URL.createObjectURL(file),
-          }));
-
-          setMedia([...media, ...newMedia]);
-          setSelectedFiles([]);
-          return 0;
-        }
-        return prev + 10;
+    try {
+      const res = await axios.post("http://localhost:3000/media", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${token}`,
+        },
+        onUploadProgress: (progressEvent) => {
+          setUploadProgress(
+            Math.round((progressEvent.loaded / progressEvent.total) * 100)
+          );
+        },
       });
-    }, 200);
+      setMedia([...media, ...res.data]);
+      setSelectedFiles([]);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(0);
+    }
   };
 
-  const deleteMedia = (id) => {
-    if (window.confirm("Are you sure you want to delete this file?")) {
+  // --- Delete Media ---
+  const deleteMedia = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this file?")) return;
+    try {
+      await axios.delete(`http://localhost:3000/media/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setMedia(media.filter((item) => item.id !== id));
+    } catch (err) {
+      console.error(err);
     }
   };
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-800">{t("media")}</h2>
-        <div className="flex items-center space-x-2">
-          <label className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md flex items-center cursor-pointer">
-            <i className="fas fa-cloud-upload-alt mr-2"></i>
-            Upload Files
-            <input
-              type="file"
-              multiple
-              className="hidden"
-              onChange={handleFileSelect}
-              accept="image/*"
-            />
-          </label>
-        </div>
+        <label className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md flex items-center cursor-pointer">
+          <i className="fas fa-cloud-upload-alt mr-2"></i>
+          Upload Files
+          <input
+            type="file"
+            multiple
+            className="hidden"
+            onChange={handleFileSelect}
+            accept="image/*"
+          />
+        </label>
       </div>
 
       {/* Upload Section */}
@@ -129,6 +121,7 @@ const Media = () => {
                 </button>
               </div>
             ))}
+
             {isUploading && (
               <div className="mt-4">
                 <div className="flex justify-between text-sm text-gray-600 mb-1">
@@ -143,6 +136,7 @@ const Media = () => {
                 </div>
               </div>
             )}
+
             <div className="flex space-x-2">
               <button
                 onClick={handleUpload}
@@ -171,7 +165,7 @@ const Media = () => {
           >
             <div className="aspect-w-16 aspect-h-9 bg-gray-200">
               <img
-                src={item.url}
+                src={`http://localhost:3000${item.url}`}
                 alt={item.name}
                 className="w-full h-48 object-cover"
               />
@@ -188,7 +182,9 @@ const Media = () => {
               </div>
               <div className="flex justify-between text-xs text-gray-500">
                 <span>{item.size}</span>
-                <span>{item.uploaded}</span>
+                <span>
+                  {new Date(item.uploaded).toISOString().split("T")[0]}
+                </span>
               </div>
             </div>
           </div>
