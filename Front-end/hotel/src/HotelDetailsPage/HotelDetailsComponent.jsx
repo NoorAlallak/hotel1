@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import Calendar from "../CalendarView/Calendar";
 import { useAuth } from "../Authentication/useAuth";
+import { useFavorites } from "../Authentication/FavoriteContext";
 
 export default function HotelDetailsComponent() {
   const { id } = useParams();
@@ -16,6 +17,9 @@ export default function HotelDetailsComponent() {
   const currentUserId = user?.id;
   const location = useLocation();
   const guestsCount = location.state?.guests || 1;
+
+  const { addFavorite, removeFavorite, isFavorite } = useFavorites();
+  const [weather, setWeather] = useState(null);
 
   useEffect(() => {
     axios
@@ -42,46 +46,54 @@ export default function HotelDetailsComponent() {
     }
 
     try {
-      console.log("Booking payload:", {
-        roomId,
-        userId: currentUserId,
-        checkInDate: selectedCheckIn,
-        checkOutDate: selectedCheckOut,
-        guestsCount,
-      });
+      const nights =
+        (new Date(selectedCheckOut) - new Date(selectedCheckIn)) /
+        (1000 * 60 * 60 * 24);
+      const room = rooms.find((r) => r.id === roomId);
+      const totalPrice = nights * room.basePrice;
+
       await axios.post(
         "http://localhost:3000/bookings/",
         {
-          roomId: roomId,
+          roomId,
           userId: currentUserId,
           checkInDate: selectedCheckIn.toISOString(),
           checkOutDate: selectedCheckOut.toISOString(),
           guestsCount,
         },
-
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      setPopup(true);
+      setPopup({ totalPrice, nights });
     } catch (err) {
       console.error(err);
       alert("Booking failed!");
     }
   };
 
+  const toggleFavorite = () => {
+    if (isFavorite(hotel.id)) {
+      removeFavorite(hotel.id);
+    } else {
+      addFavorite(hotel.id);
+    }
+  };
+  useEffect(() => {
+    const apiKey = "4798bf5707563dd92773ec1822d3b40c";
+    if (!hotel?.city) return;
+    axios
+      .get(
+        `https://api.openweathermap.org/data/2.5/weather?q=${hotel.city}&appid=${apiKey}&units=metric`
+      )
+      .then((res) => setWeather(res.data))
+      .catch((err) => console.error(err));
+  }, [hotel]);
+
   if (!hotel) return <div className="p-4">Loading…</div>;
 
   return (
     <div className="p-4 bg-[#ebf5f4] min-h-screen">
-      <Link
-        to="/"
-        className="text-teal-600 hover:underline mb-4 text-4xl"
-        aria-label="Back to hotel list"
-      >
+      <Link to="/" className="text-teal-600 mb-4 text-4xl" aria-label="Back">
         ←
       </Link>
 
@@ -89,69 +101,119 @@ export default function HotelDetailsComponent() {
         <img
           src={hotel.coverImage}
           alt={hotel.name}
-          className="w-full h-64 object-cover rounded-xl mb-6"
+          className="w-full h-64 object-cover rounded-xl mb-4"
         />
-        <h1 className="text-3xl font-bold mb-2">{hotel.name}</h1>
+        <div className="flex justify-between items-center mb-4">
+          <h1 className="text-3xl font-bold">{hotel.name}</h1>
+          <button
+            onClick={toggleFavorite}
+            className="text-3xl cursor-pointer transition duration-300"
+            aria-label="Toggle favorite"
+          >
+            {isFavorite(hotel.id) ? "❤️" : "🤍"}
+          </button>
+        </div>
         <p className="text-gray-600 mb-2">
           {hotel.city} – {hotel.address}
         </p>
-        <p className="text-gray-700 mb-4">{hotel.description}</p>
-
-        <h2 className="text-2xl font-bold mb-4">Available Rooms:</h2>
-
+        <p className="text-gray-700 mb-2">{hotel.description}</p>
+        <p className="text-gray-700 mb-4">
+          Breakfast included, Free Wi-Fi, Parking
+        </p>
+        <p>
+          {weather ? (
+            <span className="text-gray-700 font-bold">
+              Current Weather in {hotel.city} : {weather.main.temp}°C,{" "}
+              {weather.weather[0].description}
+            </span>
+          ) : (
+            <span className="text-gray-700 mb-4">Loading weather...</span>
+          )}
+        </p>
+        <h2 className="text-2xl font-bold my-6">Available Rooms:</h2>
         {rooms.length > 0 ? (
           <div className="space-y-4">
-            {rooms.map((room) => (
-              <div
-                key={room.id}
-                className="bg-gray-100 p-3 rounded-lg flex flex-col gap-3"
-              >
-                <div>
-                  <h3 className="font-semibold py-1">Room Type: {room.type}</h3>
-                  <p className="py-1">Description: {room.description}</p>
-                  <p className="py-1">Capacity: {room.capacity}</p>
-                  <p className="py-1">Price: ${room.basePrice}</p>
-                </div>
+            {rooms.map((room) => {
+              let nights = 0;
+              let estimatedPrice = 0;
+              if (selectedCheckIn && selectedCheckOut) {
+                nights =
+                  (new Date(selectedCheckOut) - new Date(selectedCheckIn)) /
+                  (1000 * 60 * 60 * 24);
+                estimatedPrice = nights * room.basePrice;
+              }
 
-                <Calendar
-                  roomId={room.id}
-                  onDatesChange={(ci, co) => {
-                    setSelectedCheckIn(ci);
-                    setSelectedCheckOut(co);
-                  }}
-                />
-
-                <button
-                  onClick={() => handleBookClick(room.id)}
-                  className="bg-teal-600 text-white px-5 py-2 rounded hover:bg-teal-700 cursor-pointer w-sm text-center ml-28 my-2"
+              return (
+                <div
+                  key={room.id}
+                  className="bg-gray-100 p-3 rounded-lg flex flex-col gap-3"
                 >
-                  Book
-                </button>
-              </div>
-            ))}
+                  <div>
+                    <h3 className="font-semibold py-1">
+                      Room Type: {room.type}
+                    </h3>
+                    <p className="py-1">Description: {room.description}</p>
+                    <p className="py-1">Capacity: {room.capacity}</p>
+                    <p className="py-1">Price: ${room.basePrice}</p>
+                  </div>
+
+                  <Calendar
+                    roomId={room.id}
+                    onDatesChange={(ci, co) => {
+                      setSelectedCheckIn(ci);
+                      setSelectedCheckOut(co);
+                    }}
+                  />
+
+                  <p className="text-sm text-gray-500 font-semibold">
+                    Selected:{" "}
+                    {selectedCheckIn
+                      ? selectedCheckIn.toLocaleDateString()
+                      : "Check-in"}{" "}
+                    -{" "}
+                    {selectedCheckOut
+                      ? selectedCheckOut.toLocaleDateString()
+                      : "Check-out"}
+                  </p>
+
+                  {nights > 0 && (
+                    <p className="text-gray-700 font-bold text-lg">
+                      {nights} nights – Est. ${estimatedPrice}
+                    </p>
+                  )}
+
+                  <button
+                    onClick={() => handleBookClick(room.id)}
+                    className="bg-teal-600 text-white px-5 py-2 rounded w-full cursor-pointer hover:bg-teal-700"
+                  >
+                    Book
+                  </button>
+                </div>
+              );
+            })}
           </div>
         ) : (
           <p className="text-gray-500">No rooms available.</p>
         )}
       </div>
 
-      {/* Modals */}
+      {/* Sign-in Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-sm text-center shadow-lg">
             <h2 className="text-xl font-semibold mb-4">
-              You must sign in to book a room
+              You must sign in to continue
             </h2>
             <div className="flex justify-center gap-4">
               <Link
                 to="/login"
-                className="bg-teal-600 text-white px-4 py-2 rounded hover:bg-teal-700 cursor-pointer"
+                className="bg-teal-600 text-white px-4 py-2 rounded hover:bg-teal-700"
               >
-                Go to Sign In
+                Sign In
               </Link>
               <button
                 onClick={() => setShowModal(false)}
-                className="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400 cursor-pointer"
+                className="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400"
               >
                 Close
               </button>
@@ -169,17 +231,21 @@ export default function HotelDetailsComponent() {
             <p className="text-gray-700 mb-4">
               Your booking has been confirmed.
             </p>
+            {popup.nights && (
+              <p className="text-gray-700 mb-4">
+                {popup.nights} nights – Total: ${popup.totalPrice}
+              </p>
+            )}
             <div className="flex justify-center gap-4">
               <button
                 onClick={() => setPopup(false)}
-                className="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400 cursor-pointer"
+                className="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400"
               >
                 Close
               </button>
-
               <Link
                 to="/bookings"
-                className="bg-teal-600 text-white px-4 py-2 rounded hover:bg-teal-700 cursor-pointer"
+                className="bg-teal-600 text-white px-4 py-2 rounded hover:bg-teal-700"
               >
                 My Bookings
               </Link>

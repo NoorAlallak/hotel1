@@ -107,6 +107,7 @@ const Bookings = () => {
               <option value="Confirmed">Confirmed</option>
               <option value="Pending">Pending</option>
               <option value="Cancelled">Cancelled</option>
+              <option value="Completed">Completed</option>
             </select>
           </div>
           <div>
@@ -184,6 +185,7 @@ const Bookings = () => {
                       <option value="Confirmed">Confirmed</option>
                       <option value="Pending">Pending</option>
                       <option value="Cancelled">Cancelled</option>
+                      <option value="Completed">Completed</option>
                     </select>
                   </td>
                 </tr>

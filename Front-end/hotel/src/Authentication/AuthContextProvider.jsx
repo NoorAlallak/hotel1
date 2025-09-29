@@ -17,6 +17,7 @@ export const AuthContextProvider = ({ children }) => {
   }, []);
   const signIn = (userData) => {
     localStorage.setItem("user", JSON.stringify(userData));
+    localStorage.setItem("token", userData.token);
     setAuthState({
       isAuthenticated: true,
       user: userData,

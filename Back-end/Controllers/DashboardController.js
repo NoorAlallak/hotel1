@@ -4,44 +4,74 @@ const { Booking, Room, User } = require("../Models/Associations");
 const { Op } = require("sequelize");
 const { authenticate, authorize } = require("../Middleware/AuthMiddleware");
 
-// GET /dashboard/status
 router.get(
   "/status",
   authenticate,
   authorize(["admin", "manager"]),
   async (req, res) => {
     try {
-      const today = new Date();
-      const startOfDay = new Date(today.setHours(0, 0, 0, 0));
-      const endOfDay = new Date(today.setHours(23, 59, 59, 999));
+      const now = new Date();
+      const startOfToday = new Date(now);
+      startOfToday.setHours(0, 0, 0, 0);
 
-      // Today's confirmed bookings
+      const endOfToday = new Date(now);
+      endOfToday.setHours(23, 59, 59, 999);
+
+      // Fix for Today's Bookings: Count bookings that occur TODAY
       const todayBookings = await Booking.count({
         where: {
-          status: "confirmed",
-          createdAt: { [Op.between]: [startOfDay, endOfDay] },
+          [Op.or]: [
+            // Bookings that start today
+            {
+              checkInDate: {
+                [Op.gte]: startOfToday,
+                [Op.lte]: endOfToday,
+              },
+            },
+            // Bookings that are ongoing today
+            {
+              checkInDate: { [Op.lte]: startOfToday },
+              checkOutDate: { [Op.gte]: endOfToday },
+            },
+            // Bookings that end today
+            {
+              checkOutDate: {
+                [Op.gte]: startOfToday,
+                [Op.lte]: endOfToday,
+              },
+            },
+          ],
+          status: { [Op.in]: ["confirmed", "completed"] },
         },
       });
 
       const totalRooms = await Room.count();
+
+      // Fix for Occupancy Rate: Count rooms occupied RIGHT NOW
+      const currentTime = new Date();
       const occupiedRooms = await Booking.count({
         where: {
-          status: "confirmed",
-          checkInDate: { [Op.lte]: today },
-          checkOutDate: { [Op.gte]: today },
+          checkInDate: { [Op.lte]: currentTime },
+          checkOutDate: { [Op.gte]: currentTime },
+          status: { [Op.in]: ["confirmed", "completed"] },
         },
+        distinct: true,
+        col: "roomId", // Count unique rooms to avoid double-counting
       });
+
       const occupancyRate = totalRooms
         ? ((occupiedRooms / totalRooms) * 100).toFixed(0)
         : 0;
 
       const bookingsWithRooms = await Booking.findAll({
-        where: { status: "confirmed" },
+        where: {
+          status: { [Op.in]: ["confirmed", "completed"] },
+        },
         include: [{ model: Room, as: "room", attributes: ["basePrice"] }],
       });
 
       const revenue = bookingsWithRooms.reduce(
-        (sum, booking) => sum + Number(booking.room?.basePrice || 0),
+        (sum, booking) => sum + (Number(booking.room?.basePrice) || 0),
         0
       );
 

@@ -5,6 +5,7 @@ const Booking = require("./Booking");
 const User = require("./User");
 const SeasonalPrice = require("./SeasonalPrice");
 const Coupon = require("./Coupon");
+const Favorite = require("./Favorite");
 
 Hotel.hasMany(Room, { foreignKey: "hotelId", as: "rooms" });
 Room.belongsTo(Hotel, { foreignKey: "hotelId", as: "hotel" });
@@ -24,6 +25,12 @@ Room.hasMany(SeasonalPrice, {
   as: "seasonalPrices",
 });
 
+User.hasMany(Favorite, { foreignKey: "userId" });
+Favorite.belongsTo(User, { foreignKey: "userId" });
+
+Hotel.hasMany(Favorite, { foreignKey: "hotelId" });
+Favorite.belongsTo(Hotel, { foreignKey: "hotelId" });
+
 module.exports = {
   sequelize,
   Hotel,
@@ -32,4 +39,5 @@ module.exports = {
   User,
   SeasonalPrice,
   Coupon,
+  Favorite,
 };

@@ -9,55 +9,84 @@ const {
 const { authenticate } = require("../Middleware/AuthMiddleware");
 const { Op } = require("sequelize");
 
-// Checkout a booking: apply coupon and seasonal price, then delete booking
 router.post("/:id", authenticate, async (req, res) => {
-  const { couponCode } = req.body;
   const bookingId = req.params.id;
+  const { couponCode } = req.body;
 
   try {
     const booking = await Booking.findByPk(bookingId, {
       include: [{ model: Room, as: "room" }],
     });
 
-    if (!booking || booking.status !== "confirmed") {
+    if (!booking) {
       return res
         .status(404)
-        .json({ message: "Booking not found or not confirmed" });
+        .json({ success: false, message: "Booking not found" });
     }
 
-    let totalPrice = booking.room.basePrice;
+    if (req.user.role !== "admin" && booking.userId !== req.user.id) {
+      return res.status(403).json({ success: false, message: "Unauthorized" });
+    }
 
-    // Apply seasonal price if applicable
+    if (booking.status !== "confirmed") {
+      return res
+        .status(400)
+        .json({ success: false, message: "Booking is not confirmed" });
+    }
+
+    let originalPrice = booking.room.basePrice;
+    let totalPrice = originalPrice;
+    let discount = 0;
+    let couponApplied = false;
+
     const seasonal = await SeasonalPrice.findOne({
       where: {
-        room_id: booking.room.id, // matches your association
+        room_id: booking.room.id,
         startDate: { [Op.lte]: booking.checkInDate },
         endDate: { [Op.gte]: booking.checkOutDate },
       },
     });
 
-    if (seasonal) totalPrice = seasonal.price;
-
-    // Apply coupon if provided
-    if (couponCode) {
-      const coupon = await Coupon.findOne({ where: { code: couponCode } });
-      if (coupon) {
-        if (coupon.type === "percentage") {
-          totalPrice -= (totalPrice * coupon.discount) / 100;
-        } else {
-          totalPrice -= coupon.discount;
-        }
-        if (totalPrice < 0) totalPrice = 0;
-      }
+    if (seasonal) {
+      totalPrice = seasonal.price;
+      originalPrice = seasonal.price;
     }
 
-    // Delete booking after checkout
-    await booking.destroy();
+    if (couponCode) {
+      const coupon = await Coupon.findOne({ where: { code: couponCode } });
+      if (!coupon) {
+        return res.status(400).json({
+          success: false,
+          couponApplied: false,
+          message: "Invalid coupon code",
+        });
+      }
+      couponApplied = true;
 
-    res.json({ message: "Checkout successful", totalPrice, bookingId });
+      if (coupon.type === "percentage") {
+        discount = (totalPrice * coupon.discount) / 100;
+      } else {
+        discount = coupon.discount;
+      }
+
+      totalPrice -= discount;
+      if (totalPrice < 0) totalPrice = 0;
+    }
+
+    await booking.update({ status: "completed" });
+
+    res.json({
+      success: true,
+      totalPrice,
+      originalPrice,
+      discount,
+      couponApplied,
+      basePrice: booking.room.basePrice,
+      bookingId: booking.id,
+    });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
+    console.error("Checkout error:", err);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 });
 

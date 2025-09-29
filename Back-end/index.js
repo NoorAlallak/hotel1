@@ -7,9 +7,11 @@ const Booking = require("./Models/Booking");
 const SeasonalPrice = require("./Models/SeasonalPrice");
 const Coupon = require("./Models/Coupon");
 const Media = require("./Models/Media");
-const path = require("path");
+const Favorite = require("./Models/Favorite");
+
 const app = express();
-app.use("/uploads", express.static("uploads"));
+const path = require("path");
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 const cores = require("cors");
 app.use(
@@ -30,6 +32,7 @@ const UserController = require("./Controllers/UserController");
 const CouponController = require("./Controllers/CouponsController");
 const CheckOutController = require("./Controllers/CheckOutController");
 const MediaController = require("./Controllers/MediaController");
+const FavoriteController = require("./Controllers/FavoriteController");
 const { authenticate, authorize } = require("./Middleware/AuthMiddleware");
 
 app.use(express.json());
@@ -57,6 +60,7 @@ app.use(
   "/uploads/rooms",
   express.static(path.join(__dirname, "uploads/rooms"))
 );
+app.use("/favorites", authenticate, FavoriteController);
 
 app.get("/admin", authenticate, authorize("admin"), (req, res) => {
   res.json({ message: `Welcome, Admin! ${req.user.id}` });

@@ -1,14 +1,13 @@
 const Hotel = require("../Models/Hotel");
 const sequelize = require("../db");
-const express = require("express");
-app.use("/uploads", express.static("uploads"));
+
 const hotels = [
   {
     name: "Desert Oasis Resort",
     city: "Aqaba",
     address: "45 Red Sea Blvd",
     description: "Relax by the Red Sea with amazing views.",
-    coverImage: "/uploads/Desert Oasis Resort.jpeg",
+    coverImage: "http://localhost:3000/uploads/DesertOasisResort.jpeg",
     manager: "Bob Smith",
   },
   {
@@ -16,7 +15,7 @@ const hotels = [
     city: "Irbid",
     address: "12 Downtown Avenue",
     description: "Affordable comfort near the city center.",
-    coverImage: "/uploads/City Center Inn.jpeg",
+    coverImage: "http://localhost:3000/uploads/CityCenterInn.jpeg",
     manager: "Carol White",
   },
   {
@@ -24,7 +23,7 @@ const hotels = [
     city: "Ajloun",
     address: "89 Hilltop Road",
     description: "Enjoy breathtaking mountain scenery.",
-    coverImage: "/uploads/Mountain View Lodge.jpeg",
+    coverImage: "http://localhost:3000/uploads/MountainViewLodge.jpeg",
     manager: "David Green",
   },
   {
@@ -32,7 +31,7 @@ const hotels = [
     city: "Aqaba",
     address: "22 Coral Street",
     description: "Perfect for sun, sand, and relaxation.",
-    coverImage: "/uploads/Seaside Escape.jpeg",
+    coverImage: "http://localhost:3000/uploads/SeasideEscape.jpeg",
     manager: "Ella Brown",
   },
   {
@@ -40,7 +39,7 @@ const hotels = [
     city: "Amman",
     address: "5 Old Town Road",
     description: "Experience the charm of the old city.",
-    coverImage: "/uploads/Historic Downtown Hotel.jpeg",
+    coverImage: "http://localhost:3000/uploads/HistoricDowntownHotel.jpeg",
     manager: "Frank Lee",
   },
   {
@@ -48,7 +47,7 @@ const hotels = [
     city: "Amman",
     address: "77 King Abdullah St",
     description: "Upscale suites with premium amenities.",
-    coverImage: "/uploads/Luxury Suites Amman.jpeg",
+    coverImage: "http://localhost:3000/uploads/LuxurySuitsAmman.jpeg",
     manager: "Grace Kim",
   },
   {
@@ -56,7 +55,7 @@ const hotels = [
     city: "Jerash",
     address: "30 Valley View Lane",
     description: "Peaceful retreat surrounded by nature.",
-    coverImage: "/uploads/Jordran Valley Retreat.jpeg",
+    coverImage: "http://localhost:3000/uploads/JordranValleyRetreat.jpeg",
     manager: "Henry Adams",
   },
   {
@@ -64,7 +63,7 @@ const hotels = [
     city: "Amman",
     address: "10 Royal Street",
     description: "Elegant hotel with fine dining options.",
-    coverImage: "/uploads/Royal Amman Hotel.jpeg",
+    coverImage: "http://localhost:3000/uploads/RoyalAmmanHotel.jpeg",
     manager: "Isabella Moore",
   },
   {
@@ -72,7 +71,7 @@ const hotels = [
     city: "Petra",
     address: "50 Ancient Way",
     description: "Stay close to the wonders of Petra.",
-    coverImage: "/uploads/Red Rock Hotel.jpeg",
+    coverImage: "http://localhost:3000/uploads/RedRockHotel.jpeg",
     manager: "Jack Wilson",
   },
   {
@@ -80,7 +79,7 @@ const hotels = [
     city: "Aqaba",
     address: "9 Lagoon Blvd",
     description: "Dive into luxury and stunning sea views.",
-    coverImage: "/uploads/Blue Lagoon Resort.jpeg",
+    coverImage: "http://localhost:3000/uploads/BlueLagoonResort.jpeg",
     manager: "Karen Taylor",
   },
 ];

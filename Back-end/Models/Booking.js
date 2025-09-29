@@ -17,7 +17,7 @@ Booking.init(
     checkInDate: { type: DataTypes.DATE, allowNull: false },
     checkOutDate: { type: DataTypes.DATE, allowNull: false },
     status: {
-      type: DataTypes.ENUM("pending", "confirmed", "cancelled"),
+      type: DataTypes.ENUM("pending", "confirmed", "cancelled", "completed"),
       defaultValue: "pending",
     },
     guestsCount: { type: DataTypes.INTEGER, allowNull: false },

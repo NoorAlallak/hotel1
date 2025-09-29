@@ -1,4 +1,5 @@
 const { User } = require("../Models/Associations");
+const { authenticate } = require("../Middleware/AuthMiddleware");
 const bcrypt = require("bcrypt");
 const express = require("express");
 const router = express.Router();
@@ -39,6 +40,35 @@ router.post("/", async (req, res) => {
         .json({ message: "Username or email already exists" });
     }
     res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
+router.put("/profile", authenticate, async (req, res) => {
+  try {
+    const { username, email, oldPassword, newPassword } = req.body;
+
+    const user = await User.findByPk(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (username) user.username = username;
+    if (email) user.email = email;
+
+    if (newPassword) {
+      if (!oldPassword)
+        return res.status(400).json({ message: "Old password is required." });
+
+      const isMatch = await bcrypt.compare(oldPassword, user.password);
+      if (!isMatch)
+        return res.status(400).json({ message: "Old password is incorrect." });
+
+      user.password = await bcrypt.hash(newPassword, 10);
+    }
+
+    await user.save();
+    res.json({ message: "Profile updated successfully", user });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
 });
 

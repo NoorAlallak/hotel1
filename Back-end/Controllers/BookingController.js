@@ -4,15 +4,16 @@ const { Booking, Room, User, Hotel } = require("../Models/Associations");
 const { Op } = require("sequelize");
 const { authenticate } = require("../Middleware/AuthMiddleware");
 
+const ALLOWED_STATUSES = ["confirmed", "cancelled", "completed"];
+
 router.post("/", async (req, res) => {
   const { roomId, userId, checkInDate, checkOutDate, guestsCount } = req.body;
-  req.body;
 
   try {
     const overlap = await Booking.findOne({
       where: {
         roomId,
-        status: "confirmed",
+        status: { [Op.in]: ["confirmed"] },
         [Op.not]: [
           {
             [Op.or]: [
@@ -49,7 +50,7 @@ router.patch("/:id", async (req, res) => {
   console.log("PATCH body:", req.body);
 
   const { status } = req.body;
-  if (!["confirmed", "cancelled"].includes(status)) {
+  if (!ALLOWED_STATUSES.includes(status)) {
     return res
       .status(400)
       .json({ message: "Invalid status", statusReceived: status });
@@ -63,17 +64,14 @@ router.patch("/:id", async (req, res) => {
     await booking.save({ fields: ["status"] });
     res.json({ message: `Booking ${status}`, booking });
   } catch (err) {
-    console.error("Error in cancel patch:", err);
+    console.error("Error in status patch:", err);
     res.status(500).json({ message: "Server error", error: err.message });
   }
 });
+
 router.get("/", authenticate, async (req, res) => {
   try {
-    let where = {};
-
-    if (req.user.role === "viewer") {
-      where.userId = req.user.id;
-    }
+    const where = req.user.role === "viewer" ? { userId: req.user.id } : {};
 
     const bookings = await Booking.findAll({
       where,
@@ -109,7 +107,9 @@ router.get("/", authenticate, async (req, res) => {
 router.get("/calendar-events", async (req, res) => {
   try {
     const { hotelId } = req.query;
-    const where = { status: "confirmed" };
+
+    const where = { status: { [Op.in]: ["confirmed"] } };
+
     if (hotelId) where["$Room.hotelId$"] = hotelId;
 
     const bookings = await Booking.findAll({
@@ -133,4 +133,5 @@ router.get("/calendar-events", async (req, res) => {
     res.status(500).json({ error: "Failed to load calendar data" });
   }
 });
+
 module.exports = router;

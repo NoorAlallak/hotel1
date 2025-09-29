@@ -13,6 +13,7 @@ export default function BookingPage() {
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [showCelebration, setShowCelebration] = useState(false);
   const [checkoutData, setCheckoutData] = useState(null);
+  const [couponError, setCouponError] = useState("");
 
   useEffect(() => {
     if (!user) return;
@@ -53,7 +54,6 @@ export default function BookingPage() {
           },
         }
       );
-
       setBookings((prev) =>
         prev.map((b) =>
           b.id === selectedBooking.id ? { ...b, status: "cancelled" } : b
@@ -72,40 +72,41 @@ export default function BookingPage() {
 
   const handleCheckout = async (bookingId, couponCode) => {
     try {
+      setCouponError("");
+
       const res = await axios.post(
         `http://localhost:3000/checkout/${bookingId}`,
-        { couponCode },
+        { couponCode: couponCode || "" },
         {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-            "Content-Type": "application/json",
-          },
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         }
       );
 
-      // Store checkout data for celebration
+      // Only show celebration if checkout success
+      if (!res.data.success) {
+        setCouponError(res.data.message || "Invalid coupon or checkout failed");
+        return;
+      }
+
       setCheckoutData({
         totalPrice: res.data.totalPrice,
         originalPrice: res.data.originalPrice,
-        discount: res.data.discount,
-        couponCode: couponCode,
+        discount: res.data.discount || 0,
+        couponCode: couponCode || "",
+        basePrice: res.data.basePrice,
       });
-
-      // Show celebration
       setShowCelebration(true);
 
-      // Remove booking from list after a delay
-      setTimeout(() => {
-        setBookings((prev) => prev.filter((b) => b.id !== bookingId));
-        setShowCelebration(false);
-        setCheckoutData(null);
-      }, 10000);
+      // Update booking status only if checkout succeeded
+      setBookings((prev) =>
+        prev.map((b) =>
+          b.id === bookingId ? { ...b, status: "completed" } : b
+        )
+      );
     } catch (err) {
       console.error("Checkout failed:", err.response?.data || err.message);
-      alert(
-        `Checkout failed: ${
-          err.response?.data?.message || "Please try again later"
-        }`
+      setCouponError(
+        err.response?.data?.message || "Checkout failed. Try again."
       );
     }
   };
@@ -113,6 +114,14 @@ export default function BookingPage() {
   const closeCelebration = () => {
     setShowCelebration(false);
     setCheckoutData(null);
+    setCouponError("");
+  };
+
+  const statusColor = {
+    confirmed: "bg-green-600",
+    completed: "bg-blue-600",
+    pending: "bg-yellow-500",
+    cancelled: "bg-red-500",
   };
 
   if (!user) {
@@ -135,10 +144,9 @@ export default function BookingPage() {
         My Bookings
       </h1>
 
-      {/* Celebration Animation */}
-      {showCelebration && (
+      {/* Celebration Popup */}
+      {showCelebration && checkoutData && (
         <>
-          {/* Confetti Background */}
           <div className="fixed inset-0 pointer-events-none z-50">
             {[...Array(80)].map((_, i) => (
               <div
@@ -154,34 +162,13 @@ export default function BookingPage() {
                 }}
               />
             ))}
-
-            {/* Floating Celebration Elements */}
-            {["🎉", "✨", "💰", "✅", "🎊", "🏨", "⭐", "💫"].map(
-              (emoji, i) => (
-                <div
-                  key={i}
-                  className="absolute text-3xl animate-bounce pointer-events-none"
-                  style={{
-                    left: `${10 + Math.random() * 80}%`,
-                    animationDelay: `${i * 0.2}s`,
-                    animationDuration: `${2 + Math.random() * 2}s`,
-                  }}
-                >
-                  {emoji}
-                </div>
-              )
-            )}
           </div>
 
-          {/* Celebration Modal */}
           <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
             <div
               className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 text-center shadow-2xl"
-              style={{
-                animation: "scaleIn 0.5s ease-out",
-              }}
+              style={{ animation: "scaleIn 0.5s ease-out" }}
             >
-              {/* Success Icon */}
               <div className="w-24 h-24 bg-gradient-to-r from-green-400 to-teal-500 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
                 <svg
                   className="w-12 h-12 text-white"
@@ -221,26 +208,30 @@ export default function BookingPage() {
                   </div>
                 )}
 
+                <div className="space-y-2 text-sm text-gray-600 mb-3">
+                  <div className="flex justify-between">
+                    <span>Base Price:</span>
+                    <span>
+                      ${checkoutData?.basePrice || checkoutData?.originalPrice}
+                    </span>
+                  </div>
+                  {checkoutData?.discount > 0 && (
+                    <div className="flex justify-between text-green-600">
+                      <span>Discount:</span>
+                      <span>-${checkoutData.discount}</span>
+                    </div>
+                  )}
+                </div>
+
                 <div className="flex justify-between items-center border-t pt-3">
-                  <span className="text-gray-600">Total Paid:</span>
+                  <span className="text-gray-600 font-semibold">
+                    Total Paid:
+                  </span>
                   <span className="text-2xl font-bold text-teal-600">
                     ${checkoutData?.totalPrice}
                   </span>
                 </div>
-
-                {checkoutData?.originalPrice !== checkoutData?.totalPrice && (
-                  <div className="flex justify-between items-center text-sm text-gray-500">
-                    <span>Original price:</span>
-                    <span className="line-through">
-                      ${checkoutData?.originalPrice}
-                    </span>
-                  </div>
-                )}
               </div>
-
-              <p className="text-gray-500 mb-6 text-sm">
-                A confirmation email has been sent to your inbox
-              </p>
 
               <div className="flex flex-col gap-3">
                 <button
@@ -260,7 +251,6 @@ export default function BookingPage() {
             </div>
           </div>
 
-          {/* CSS Animation */}
           <style jsx>{`
             @keyframes scaleIn {
               from {
@@ -315,17 +305,13 @@ export default function BookingPage() {
               <div className="mt-4 flex justify-between items-center">
                 <span
                   className={`px-2 py-1 rounded text-white text-sm ${
-                    b.status === "confirmed"
-                      ? "bg-green-600"
-                      : b.status === "pending"
-                      ? "bg-yellow-500"
-                      : "bg-red-500"
+                    statusColor[b.status] || "bg-gray-400"
                   }`}
                 >
                   {b.status.toUpperCase()}
                 </span>
 
-                {b.status !== "cancelled" && (
+                {b.status === "confirmed" && (
                   <button
                     onClick={() => confirmCancel(b)}
                     className="border border-red-600 text-red-600 px-3 py-1 rounded hover:bg-red-600 hover:text-white transition text-sm cursor-pointer"
@@ -348,17 +334,23 @@ export default function BookingPage() {
                     type="text"
                     placeholder="Enter coupon code (optional)"
                     value={b.couponCode || ""}
-                    onChange={(e) =>
+                    onChange={(e) => {
                       setBookings((prev) =>
                         prev.map((bk) =>
                           bk.id === b.id
                             ? { ...bk, couponCode: e.target.value }
                             : bk
                         )
-                      )
-                    }
-                    className="border border-gray-300 px-2 py-1 rounded text-sm"
+                      );
+                      if (couponError) setCouponError("");
+                    }}
+                    className={`border px-2 py-1 rounded text-sm ${
+                      couponError ? "border-red-500" : "border-gray-300"
+                    }`}
                   />
+                  {couponError && (
+                    <p className="text-red-500 text-xs mt-1">{couponError}</p>
+                  )}
                   <button
                     onClick={() => handleCheckout(b.id, b.couponCode)}
                     className="bg-teal-600 text-white px-3 py-1 rounded hover:bg-teal-700 text-sm cursor-pointer transition-all duration-200 hover:scale-105"
